@@ -7,8 +7,20 @@ import time
 import requests
 from streamlit_gsheets import GSheetsConnection
 
-# جلب الرابط من الإعدادات السرية بشكل آمن
-SCRIPT_URL = st.secrets.get("script_url", "")
+import os
+
+# وظيفة آمنة جداً لجلب الأسرار دون التسبب في توقف البرنامج
+def get_secret(key, default=""):
+    try:
+        # البحث في متغيرات النظام أولاً (أفضل لـ Railway)
+        val = os.environ.get(key.upper(), os.environ.get(key, ""))
+        if val: return val
+        # البحث في أسرار ستريمليت إذا وجدت
+        return st.secrets.get(key, default)
+    except:
+        return os.environ.get(key.upper(), default)
+
+SCRIPT_URL = get_secret("script_url")
 
 # إعدادات الصفحة
 st.set_page_config(page_title="مشرف تنمية العلاقات المجتمعية", layout="wide", initial_sidebar_state="auto")
@@ -139,11 +151,13 @@ if not st.session_state.logged_in:
 
 is_admin = st.session_state.user_role == "admin"
 
-# محاولة الربط بجوجل شيت
-try:
-    conn_gs = st.connection("gsheets", type=GSheetsConnection)
-except Exception as e:
-    conn_gs = None
+# محاولة الربط بجوجل شيت بشكل آمن
+conn_gs = None
+if os.path.exists(".streamlit/secrets.toml") or os.environ.get("CONNECTIONS_GSHEETS_SPREADSHEET"):
+    try:
+        conn_gs = st.connection("gsheets", type=GSheetsConnection)
+    except Exception:
+        conn_gs = None
 
 # تنسيق CSS مخصص - ألوان هادئة ورسمية
 st.markdown("""
