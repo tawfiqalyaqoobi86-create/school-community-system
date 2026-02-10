@@ -1,19 +1,23 @@
 import sqlite3
 import pandas as pd
+import os
+
+# تحديد المسار المطلق لقاعدة البيانات
+# إذا كان التطبيق يعمل على منصة تدعم المجلدات الدائمة مثل Railway، سيستخدم المسار المخصص
+DB_PATH = os.environ.get('PERSISTENT_DB_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'community_relations.db'))
 
 def init_db():
-    conn = sqlite3.connect('community_relations.db')
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
     # 1. جدول أولياء الأمور
     c.execute('''CREATE TABLE IF NOT EXISTS parents (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        participation_type TEXT, -- دعم تعليمي، مالي، خبرات، تطوع، مبادرات
-        interaction_level TEXT, -- مرتفع، متوسط، محدود
-        expertise TEXT, -- المجال المهني أو المهارة
-        interaction_history TEXT, -- سجل اللقاءات والأنشطة
-        last_contact DATE
+        participation_type TEXT,
+        expertise TEXT,
+        interaction_level TEXT,
+        phone TEXT
     )''')
     
     # 2. جدول خطة العمل
@@ -24,22 +28,12 @@ def init_db():
         responsibility TEXT,
         timeframe TEXT,
         kpi TEXT,
-        status TEXT DEFAULT 'قيد التنفيذ', -- مكتمل، قيد التنفيذ، مؤجل
-        priority TEXT -- مرتفع، متوسط، منخفض
+        status TEXT DEFAULT 'قيد التنفيذ',
+        priority TEXT,
+        task_type TEXT DEFAULT 'معنوي'
     )''')
     
-    # 3. جدول المبادرات
-    c.execute('''CREATE TABLE IF NOT EXISTS initiatives (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT NOT NULL,
-        category TEXT, -- تعليمي، اجتماعي، مهني، صحي، ثقافي
-        target_group TEXT,
-        impact_score INTEGER, -- 1-10
-        outcomes TEXT,
-        date DATE
-    )''')
-    
-    # 4. جدول سجل اللقاءات والملاحظات التطويرية (للذكاء الاصطناعي)
+    # 4. جدول سجل اللقاءات والملاحظات التطويرية
     c.execute('''CREATE TABLE IF NOT EXISTS meetings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         subject TEXT,
@@ -48,12 +42,30 @@ def init_db():
         summary TEXT,
         ai_recommendations TEXT
     )''')
+
+    # 5. جدول الفعاليات والأنشطة
+    c.execute('''CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        date DATE,
+        location TEXT,
+        attendees_count INTEGER,
+        rating INTEGER
+    )''')
+    
+    # 6. جدول التقارير المحفوظة
+    c.execute('''CREATE TABLE IF NOT EXISTS reports (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        report_date TEXT,
+        report_content TEXT
+    )''')
     
     conn.commit()
     conn.close()
 
 def get_connection():
-    return sqlite3.connect('community_relations.db')
+    init_db() # التأكد من وجود الجداول في كل مرة
+    return sqlite3.connect(DB_PATH, timeout=20)
 
 if __name__ == "__main__":
     init_db()
